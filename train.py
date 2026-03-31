@@ -2,21 +2,19 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from data_setup import train_loader, val_loader
+# Her iki modeli de import ediyoruz ama aşağıda MobileNet'i seçeceğiz
 from models.resnet_model import get_resnet50 
-from models.mobilenet_model import get_mobilenet_v2 # Burayı kontrol et
+from models.mobilenet_model import get_mobilenet_v2 
 import time
-import os # Yeni eklendi: Klasör yönetimi için
+import os
 
-# 1. Kayıt Klasörünü Oluştur (Sistemsel ilerleme için şart)
+# 1. Kayıt Klasörünü Oluştur
 if not os.path.exists('checkpoints'):
     os.makedirs('checkpoints')
 
-# ... cihaz ve model yükleme kısımları aynı kalıyor ...
-
-# 4. Gelişmiş Eğitim Fonksiyonu (Checkpoint Destekli)
+# 4. Gelişmiş Eğitim Fonksiyonu (MobileNet'e göre uyarlandı)
 def train_model(model, criterion, optimizer, num_epochs=3):
-    since = time.time() # time burada kullanıldı, uyarı gidecektir
-
+    since = time.time()
     best_acc = 0.0
 
     for epoch in range(num_epochs):
@@ -32,7 +30,7 @@ def train_model(model, criterion, optimizer, num_epochs=3):
             running_loss = 0.0
             running_corrects = 0
 
-            for inputs, labels in train_loader if phase == 'train' else val_loader:
+            for inputs, labels in (train_loader if phase == 'train' else val_loader):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
@@ -55,11 +53,11 @@ def train_model(model, criterion, optimizer, num_epochs=3):
 
             print(f"{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}")
 
-            # EĞER EN İYİ MODELSE KAYDET (Sistemsel Güvence)
+            # EĞER EN İYİ MODELSE KAYDET (İsim best_mobilenet.pth olarak güncellendi)
             if phase == 'val' and epoch_acc > best_acc:
                 best_acc = epoch_acc
-                torch.save(model.state_dict(), 'checkpoints/best_resnet.pth')
-                print(">>> En iyi model checkpoints klasörüne kaydedildi!")
+                torch.save(model.state_dict(), 'checkpoints/best_mobilenet.pth')
+                print(">>> En iyi MobileNetV2 modeli kaydedildi!")
 
     time_elapsed = time.time() - since
     print(f'\nEğitim tamamlandı: {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
@@ -71,15 +69,15 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Kullanılan Cihaz: {device}")
 
-    # 2. Modeli Yükle
+    # 2. Modeli Yükle (MobileNetV2 seçildi)
     num_classes = 38
-    print("ResNet-50 Modeli Hazırlanıyor...")
-    model = get_resnet50(num_classes).to(device)
+    print("MobileNetV2 Modeli Hazırlanıyor...")
+    model = get_mobilenet_v2(num_classes).to(device)
 
     # 3. Kayıp Fonksiyonu ve Optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     # 4. Fonksiyonu Çağır (Eğitimi Başlat)
-    print("Eğitim Döngüsü Başlatılıyor...")
+    print("MobileNetV2 Eğitim Döngüsü Başlatılıyor...")
     trained_model = train_model(model, criterion, optimizer, num_epochs=3)
