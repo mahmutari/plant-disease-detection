@@ -23,7 +23,8 @@ mobilenet.eval()
 
 # 3. Rastgele Bir Test Fotoğrafı Seç
 test_dir = 'data/val'
-all_classes = os.listdir(test_dir)
+# sorted() ensures index alignment with ImageFolder, which also sorts classes alphabetically
+all_classes = sorted(os.listdir(test_dir))
 random_class = random.choice(all_classes)
 class_path = os.path.join(test_dir, random_class)
 random_image = random.choice(os.listdir(class_path))
