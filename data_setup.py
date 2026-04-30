@@ -13,7 +13,7 @@ val_data = datasets.ImageFolder(val_dir, transform=val_transforms)
 
 # 3. DataLoader'ları oluşturalım
 # Batch size: Her adımda kaç fotoğraf işlenecek (Genelde 32 veya 64 seçilir)
-BATCH_SIZE = 32
+BATCH_SIZE = 8
 
 train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=False)
