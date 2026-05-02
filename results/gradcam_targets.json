@@ -1,0 +1,107 @@
+{
+  "sanity_check": [
+    {
+      "image_path": "data/val/Grape___healthy/00e00912-bf75-4cf8-8b7d-ad64b73bea5f___Mt.N.V_HL 6067_new30degFlipLR.JPG",
+      "true_class": "Grape___healthy",
+      "true_class_idx": 14,
+      "category": "sanity",
+      "model": "mobilenet",
+      "confidence": 1.0,
+      "note": "MobileNet top-tier class (F1=1.00)"
+    },
+    {
+      "image_path": "data/val/Apple___Black_rot/032cf235-07ff-478f-b347-d55c07835bc5___JR_FrgE.S 8778.JPG",
+      "true_class": "Apple___Black_rot",
+      "true_class_idx": 1,
+      "category": "sanity",
+      "model": "mobilenet",
+      "confidence": 1.0,
+      "note": "Apple disease, high accuracy class"
+    },
+    {
+      "image_path": "data/val/Soybean___healthy/00457581-0077-442d-b19a-0dc6027e8cfc___RS_HL 5635.JPG",
+      "true_class": "Soybean___healthy",
+      "true_class_idx": 24,
+      "category": "sanity",
+      "model": "mobilenet",
+      "confidence": 1.0,
+      "note": "High-support, near-perfect class"
+    }
+  ],
+  "confusion": [
+    {
+      "image_path": "data/val/Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot/00120a18-ff90-46e4-92fb-2b7a10345bd3___RS_GLSp 9357.JPG",
+      "true_class": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+      "true_class_idx": 7,
+      "category": "confusion",
+      "model": "mobilenet",
+      "note": "top-1 MobileNet confusion pair (103 / 410 errors)"
+    },
+    {
+      "image_path": "data/val/Tomato___Late_blight/008ebb44-eb77-4843-b621-4b88b5df7d43___RS_Late.B 5188.JPG",
+      "true_class": "Tomato___Late_blight",
+      "true_class_idx": 30,
+      "category": "confusion",
+      "model": "mobilenet",
+      "note": "cross-species confusion (22 errors) — visually similar lesions"
+    },
+    {
+      "image_path": "data/val/Tomato___Early_blight/0114f7b3-7f56-4bef-aa47-7a82da142d4b___RS_Erly.B 7437.JPG",
+      "true_class": "Tomato___Early_blight",
+      "true_class_idx": 29,
+      "category": "confusion",
+      "model": "mobilenet",
+      "note": "intra-genus Tomato confusion (22 errors)"
+    }
+  ],
+  "comparison": [
+    {
+      "image_path": "data/val/Tomato___Late_blight/005a2c1f-4e15-49e4-9e5c-61dc3ecf9708___RS_Late.B 5096.JPG",
+      "true_class": "Tomato___Late_blight",
+      "true_class_idx": 30,
+      "category": "comparison",
+      "model": "mobilenet",
+      "note": "ResNet worst class (F1=0.796); MobileNet handles it much better"
+    },
+    {
+      "image_path": "data/val/Tomato___Late_blight/005a2c1f-4e15-49e4-9e5c-61dc3ecf9708___RS_Late.B 5096.JPG",
+      "true_class": "Tomato___Late_blight",
+      "true_class_idx": 30,
+      "category": "comparison",
+      "model": "resnet",
+      "note": "ResNet worst class (F1=0.796); MobileNet handles it much better"
+    },
+    {
+      "image_path": "data/val/Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot/00120a18-ff90-46e4-92fb-2b7a10345bd3___RS_GLSp 9357.JPG",
+      "true_class": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+      "true_class_idx": 7,
+      "category": "comparison",
+      "model": "mobilenet",
+      "note": "ResNet F1=0.931 vs MobileNet F1=0.844 — ResNet has edge here"
+    },
+    {
+      "image_path": "data/val/Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot/00120a18-ff90-46e4-92fb-2b7a10345bd3___RS_GLSp 9357.JPG",
+      "true_class": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+      "true_class_idx": 7,
+      "category": "comparison",
+      "model": "resnet",
+      "note": "ResNet F1=0.931 vs MobileNet F1=0.844 — ResNet has edge here"
+    },
+    {
+      "image_path": "data/val/Grape___healthy/00e00912-bf75-4cf8-8b7d-ad64b73bea5f___Mt.N.V_HL 6067_90deg.JPG",
+      "true_class": "Grape___healthy",
+      "true_class_idx": 14,
+      "category": "comparison",
+      "model": "mobilenet",
+      "note": "Both models excel (F1>=0.99) — expected clean, complete activation"
+    },
+    {
+      "image_path": "data/val/Grape___healthy/00e00912-bf75-4cf8-8b7d-ad64b73bea5f___Mt.N.V_HL 6067_90deg.JPG",
+      "true_class": "Grape___healthy",
+      "true_class_idx": 14,
+      "category": "comparison",
+      "model": "resnet",
+      "note": "Both models excel (F1>=0.99) — expected clean, complete activation"
+    }
+  ]
+}
