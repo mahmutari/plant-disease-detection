@@ -1,0 +1,39 @@
+class_name,mobilenet_f1,resnet_f1,difference,winner,tier
+Apple___Apple_scab,0.9776,0.9504,+0.0272,MobileNet,MobileNet wins
+Apple___Black_rot,0.9940,0.9613,+0.0327,MobileNet,MobileNet wins
+Apple___Cedar_apple_rust,0.9756,0.9769,-0.0013,Tie,Close
+Apple___healthy,0.9724,0.9389,+0.0335,MobileNet,MobileNet wins
+Blueberry___healthy,0.9763,0.9396,+0.0367,MobileNet,MobileNet wins
+Cherry_(including_sour)___Powdery_mildew,0.9976,0.9683,+0.0293,MobileNet,MobileNet wins
+Cherry_(including_sour)___healthy,0.9764,0.9730,+0.0034,Tie,Close
+Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,0.8440,0.9305,-0.0865,ResNet,Both <0.95
+Corn_(maize)___Common_rust_,0.9937,0.9751,+0.0186,Tie,Close
+Corn_(maize)___Northern_Leaf_Blight,0.8935,0.9450,-0.0515,ResNet,Both <0.95
+Corn_(maize)___healthy,0.9936,0.9979,-0.0043,Tie,Both >=0.99
+Grape___Black_rot,0.9883,0.9056,+0.0827,MobileNet,MobileNet wins
+Grape___Esca_(Black_Measles),0.9917,0.9460,+0.0457,MobileNet,MobileNet wins
+Grape___Leaf_blight_(Isariopsis_Leaf_Spot),1.0000,0.9871,+0.0129,Tie,Close
+Grape___healthy,1.0000,0.9906,+0.0094,Tie,Both >=0.99
+Orange___Haunglongbing_(Citrus_greening),0.9941,0.9154,+0.0787,MobileNet,MobileNet wins
+Peach___Bacterial_spot,0.9860,0.9603,+0.0257,MobileNet,MobileNet wins
+Peach___healthy,0.9829,0.9782,+0.0047,Tie,Close
+"Pepper,_bell___Bacterial_spot",0.9747,0.9568,+0.0179,Tie,Close
+"Pepper,_bell___healthy",0.9826,0.9277,+0.0549,MobileNet,MobileNet wins
+Potato___Early_blight,0.9898,0.9907,-0.0009,Tie,Close
+Potato___Late_blight,0.9655,0.9254,+0.0401,MobileNet,MobileNet wins
+Potato___healthy,0.9879,0.9344,+0.0535,MobileNet,MobileNet wins
+Raspberry___healthy,0.9978,0.9801,+0.0177,Tie,Close
+Soybean___healthy,0.9920,0.9626,+0.0294,MobileNet,MobileNet wins
+Squash___Powdery_mildew,0.9954,0.9676,+0.0278,MobileNet,MobileNet wins
+Strawberry___Leaf_scorch,0.9977,0.9406,+0.0571,MobileNet,MobileNet wins
+Strawberry___healthy,0.9934,0.9812,+0.0122,Tie,Close
+Tomato___Bacterial_spot,0.9564,0.9004,+0.0560,MobileNet,MobileNet wins
+Tomato___Early_blight,0.9093,0.8896,+0.0197,Tie,Both <0.95
+Tomato___Late_blight,0.9166,0.7964,+0.1202,MobileNet,Both <0.95
+Tomato___Leaf_Mold,0.9774,0.9565,+0.0209,MobileNet,MobileNet wins
+Tomato___Septoria_leaf_spot,0.9401,0.8978,+0.0423,MobileNet,Both <0.95
+Tomato___Spider_mites Two-spotted_spider_mite,0.9229,0.9456,-0.0227,ResNet,Both <0.95
+Tomato___Target_Spot,0.9034,0.8850,+0.0184,Tie,Both <0.95
+Tomato___Tomato_Yellow_Leaf_Curl_Virus,0.9773,0.9583,+0.0190,Tie,Close
+Tomato___Tomato_mosaic_virus,0.9878,0.9759,+0.0119,Tie,Close
+Tomato___healthy,0.9806,0.9464,+0.0342,MobileNet,MobileNet wins
