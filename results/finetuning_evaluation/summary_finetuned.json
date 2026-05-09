@@ -1,0 +1,10 @@
+{
+  "label": "finetuned",
+  "plantdoc_path": "data/plantdoc/PlantDoc-Dataset/test",
+  "n_images": 231,
+  "overall_accuracy": 0.307359,
+  "topk_accuracy": 0.584416,
+  "macro_precision": 0.294993,
+  "macro_recall": 0.313513,
+  "macro_f1": 0.289683
+}

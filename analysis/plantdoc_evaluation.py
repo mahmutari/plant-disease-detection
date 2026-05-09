@@ -15,6 +15,7 @@ Usage:
 
 import argparse
 import csv
+import json
 import os
 import sys
 
@@ -87,9 +88,10 @@ def load_plantvillage_classes(val_dir: str) -> List[str]:
 
 
 def load_model(
-    model_name: str, num_classes: int, device: torch.device
+    model_name: str, num_classes: int, device: torch.device,
+    checkpoint_path: str | None = None,
 ) -> torch.nn.Module:
-    checkpoint_paths = {
+    default_paths = {
         "mobilenet": "checkpoints/best_mobilenet.pth",
         "resnet":    "checkpoints/best_resnet.pth",
     }
@@ -97,7 +99,7 @@ def load_model(
         "mobilenet": get_mobilenet_v2,
         "resnet":    get_resnet50,
     }
-    path = checkpoint_paths[model_name]
+    path = checkpoint_path if checkpoint_path else default_paths[model_name]
     model = model_factories[model_name](num_classes).to(device)
     model.load_state_dict(torch.load(path, map_location=device))
     model.eval()
@@ -371,9 +373,22 @@ def main() -> None:
         "--top-k", type=int, default=3, metavar="K",
         help="Compute top-K accuracy (default: 3)",
     )
+    parser.add_argument(
+        "--out-dir", default="results/plantdoc", metavar="DIR",
+        help="Output directory for results (default: results/plantdoc)",
+    )
+    parser.add_argument(
+        "--label", default="plantdoc", metavar="LABEL",
+        help="Label suffix for output file names (default: plantdoc)",
+    )
+    parser.add_argument(
+        "--checkpoint", default=None, metavar="PATH",
+        help="Override checkpoint path (default: model-specific default)",
+    )
     args = parser.parse_args()
 
-    out_dir = "results/plantdoc"
+    out_dir = args.out_dir
+    label   = args.label
     os.makedirs(out_dir, exist_ok=True)
 
     device = torch.device("cpu")
@@ -402,7 +417,7 @@ def main() -> None:
         )
 
     # 3. Load model
-    model = load_model(args.model, len(pv_class_names), device)
+    model = load_model(args.model, len(pv_class_names), device, args.checkpoint)
 
     # 4. Collect image paths
     samples = collect_image_paths(args.plantdoc_path, pd_class_names)
@@ -420,13 +435,13 @@ def main() -> None:
     cm = compute_confusion_matrix(y_true, y_pred_pd, len(pd_class_names))
     plot_confusion_matrix(
         cm, pd_class_names,
-        output_path=os.path.join(out_dir, "confusion_matrix_plantdoc.png"),
+        output_path=os.path.join(out_dir, f"confusion_matrix_{label}.png"),
     )
 
     # 7. Per-class accuracy CSV
     per_class_rows = save_per_class_csv(
         pd_class_names, y_true, y_pred_pd,
-        output_path=os.path.join(out_dir, "per_class_results_plantdoc.csv"),
+        output_path=os.path.join(out_dir, f"per_class_results_{label}.csv"),
     )
 
     # 8. Full classification report
@@ -439,13 +454,13 @@ def main() -> None:
         digits=4,
         zero_division=0,
     )
-    report_path = os.path.join(out_dir, "classification_report_plantdoc.txt")
+    report_path = os.path.join(out_dir, f"classification_report_{label}.txt")
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(report_str)
     print(f"Saved: {report_path}")
 
     # 9. Raw arrays for downstream analysis
-    npz_path = os.path.join(out_dir, "plantdoc_evaluation_data.npz")
+    npz_path = os.path.join(out_dir, f"{label}_evaluation_data.npz")
     np.savez(
         npz_path,
         y_true=y_true,
@@ -457,12 +472,29 @@ def main() -> None:
     )
     print(f"Saved: {npz_path}")
 
-    # 10. Placeholder for later analysis writeup
-    md_path = os.path.join(out_dir, "PLANTDOC_ANALYSIS.md")
-    if not os.path.exists(md_path):
-        with open(md_path, "w", encoding="utf-8") as f:
-            f.write("# PlantDoc Cross-Dataset Analysis\n\n_Results will be filled after evaluation._\n")
-        print(f"Saved: {md_path}")
+    # 10. JSON summary for automated comparison
+    overall_acc = float((y_pred_pd == y_true).sum() / len(y_true))
+    topk_acc    = float(y_topk.mean())
+    precision, recall, f1, _ = precision_recall_fscore_support(
+        y_true, y_pred_sk,
+        labels=list(range(n_pd)),
+        average="macro",
+        zero_division=0,
+    )
+    summary = {
+        "label":            label,
+        "plantdoc_path":    args.plantdoc_path,
+        "n_images":         int(len(y_true)),
+        "overall_accuracy": round(overall_acc, 6),
+        "topk_accuracy":    round(topk_acc, 6),
+        "macro_precision":  round(float(precision), 6),
+        "macro_recall":     round(float(recall), 6),
+        "macro_f1":         round(float(f1), 6),
+    }
+    json_path = os.path.join(out_dir, f"summary_{label}.json")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+    print(f"Saved: {json_path}")
 
     # 11. Terminal summary
     print_summary(pd_class_names, y_true, y_pred_pd, y_topk, args.top_k, per_class_rows)

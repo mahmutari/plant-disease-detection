@@ -1,0 +1,31 @@
+{
+  "phase": "3.10.B — Fine-tuned Model Evaluation",
+  "strategy": "Frozen backbone, classifier head fine-tuned on PlantDoc train (2246 images, 3 epochs)",
+  "results": {
+    "plantvillage_val": {
+      "original":   0.9713,
+      "finetuned":  0.5896,
+      "delta_pp":   -38.17,
+      "note": "Catastrophic forgetting in classifier head — 10/38 classes have no PlantDoc equivalent"
+    },
+    "plantdoc_test": {
+      "original":   0.1602,
+      "finetuned":  0.3074,
+      "delta_pp":   +14.72,
+      "n_images":   231,
+      "note": "Significant cross-domain improvement"
+    },
+    "web_validation": {
+      "original":   0.0667,
+      "finetuned":  0.2667,
+      "delta_pp":   +20.0,
+      "n_in_dist":  15,
+      "note": "4x improvement on real-world images"
+    }
+  },
+  "analysis": {
+    "finding": "Fine-tuning improved cross-domain performance but caused classifier drift on original domain",
+    "cause": "Classifier head updated with PlantDoc visual patterns; 10/38 PV classes never reinforced",
+    "recommendation": "Consider lower learning rate (0.0001), more epochs, or knowledge distillation to preserve PV accuracy"
+  }
+}

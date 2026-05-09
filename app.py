@@ -43,13 +43,13 @@ st.set_page_config(
 # =====================================================================
 
 @st.cache_resource(show_spinner="Loading MobileNetV2 model...")
-def load_model() -> torch.nn.Module:
+def load_model(checkpoint_path: str) -> torch.nn.Module:
     """
     Load trained MobileNetV2 with checkpoint weights.
     Cached by Streamlit so the model is loaded only once per session.
     """
     model = get_mobilenet_v2(num_classes=38)
-    state = torch.load("checkpoints/best_mobilenet.pth", map_location="cpu")
+    state = torch.load(checkpoint_path, map_location="cpu")
     model.load_state_dict(state)
     model.eval()
     return model
@@ -163,8 +163,21 @@ def create_overlay_visualization(
 # Sidebar
 # =====================================================================
 
+CHECKPOINTS = {
+    "Original (PlantVillage, 97.13% val)":    "checkpoints/best_mobilenet.pth",
+    "Fine-tuned (PlantDoc, 30.74% PlantDoc)": "checkpoints/best_mobilenet_finetuned.pth",
+}
+
 with st.sidebar:
     st.title("🌿 Plant Disease Detector")
+    st.markdown("---")
+    st.markdown("### Model")
+    selected_label = st.selectbox(
+        "Checkpoint",
+        options=list(CHECKPOINTS.keys()),
+        index=0,
+    )
+    selected_ckpt = CHECKPOINTS[selected_label]
     st.markdown("---")
     st.markdown("### About")
     st.markdown(
@@ -174,12 +187,24 @@ with st.sidebar:
     )
     st.markdown("---")
     st.markdown("### Model Info")
-    st.markdown(
-        "**Architecture:** MobileNetV2  \n"
-        "**Accuracy:** 97.13% (val set)  \n"
-        "**Classes:** 38  \n"
-        "**Input size:** 224 × 224 px"
-    )
+    if "Fine-tuned" in selected_label:
+        st.markdown(
+            "**Architecture:** MobileNetV2  \n"
+            "**PlantVillage val:** 58.96%  \n"
+            "**PlantDoc test:** 30.74%  \n"
+            "**Web (in-dist):** 26.67%  \n"
+            "**Classes:** 38  \n"
+            "**Input size:** 224 × 224 px"
+        )
+    else:
+        st.markdown(
+            "**Architecture:** MobileNetV2  \n"
+            "**PlantVillage val:** 97.13%  \n"
+            "**PlantDoc test:** 16.02%  \n"
+            "**Web (in-dist):** 6.67%  \n"
+            "**Classes:** 38  \n"
+            "**Input size:** 224 × 224 px"
+        )
     st.markdown("---")
     st.markdown("### Project Info")
     st.markdown(
@@ -195,12 +220,12 @@ with st.sidebar:
 # =====================================================================
 
 try:
-    model       = load_model()
+    model       = load_model(selected_ckpt)
     class_names = load_class_names()
 except Exception as e:
     st.error(
         f"**Model loading failed.**  \n"
-        f"Make sure `checkpoints/best_mobilenet.pth` and `data/val/` exist.  \n"
+        f"Make sure `{selected_ckpt}` and `data/val/` exist.  \n"
         f"Error: `{e}`"
     )
     st.stop()

@@ -1,0 +1,7 @@
+{
+  "checkpoint": "checkpoints/best_mobilenet_finetuned.pth",
+  "val_dir": "data/val",
+  "n_images": 17572,
+  "n_correct": 10361,
+  "accuracy": 0.589631
+}

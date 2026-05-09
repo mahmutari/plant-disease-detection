@@ -1,0 +1,8 @@
+{
+  "suffix": "enhanced",
+  "source": "C:\\Users\\arima\\Desktop\\Plant_Disease\\test_images\\enhanced\\web_validation",
+  "total_images": 25,
+  "in_dist_images": 15,
+  "correct": 1,
+  "accuracy": 0.066667
+}

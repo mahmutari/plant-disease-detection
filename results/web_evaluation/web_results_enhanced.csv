@@ -1,0 +1,26 @@
+filename,subfolder,ground_truth,correct,top1_class,top1_confidence,top2_class,top2_confidence,top3_class,top3_confidence
+apple_scab_01.jpg,easy,Apple___Apple_scab,NO,Strawberry___Leaf_scorch,0.9992,Grape___Esca_(Black_Measles),0.0006,Cherry_(including_sour)___Powdery_mildew,0.0002
+apple_scab_02.jpg,easy,Apple___Apple_scab,NO,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,0.5056,Tomato___Late_blight,0.3230,Tomato___Early_blight,0.0654
+corn_common_rust_01.jpg,easy,Corn_(maize)___Common_rust_,NO,Tomato___healthy,0.9992,Corn_(maize)___healthy,0.0007,Apple___healthy,0.0001
+potato_late_blight_01.jpg,easy,Potato___Late_blight,NO,Blueberry___healthy,0.5155,Peach___healthy,0.2497,Tomato___Tomato_mosaic_virus,0.2249
+tomato_early_blight_01.jpg,easy,Tomato___Early_blight,NO,"Pepper,_bell___Bacterial_spot",0.5610,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,0.4166,Strawberry___Leaf_scorch,0.0108
+tomato_septoria_leaf_01.jpg,easy,Tomato___Septoria_leaf_spot,NO,Tomato___Early_blight,0.5732,Apple___Cedar_apple_rust,0.2666,Peach___healthy,0.0546
+apple_fire_blight_dense_01.jpg,hard,OOD/UNKNOWN,OOD,Tomato___Leaf_Mold,0.9855,"Pepper,_bell___Bacterial_spot",0.0145,Potato___Early_blight,0.0000
+apple_fire_blight_dense_02.jpg,hard,OOD/UNKNOWN,OOD,Grape___Esca_(Black_Measles),1.0000,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,0.0000,Strawberry___Leaf_scorch,0.0000
+potato_late_blight_dense_01.jpg,hard,Potato___Late_blight,NO,Corn_(maize)___healthy,0.9309,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,0.0376,Tomato___healthy,0.0261
+tomato_early_blight_heavy_01.jpg,hard,Tomato___Early_blight,NO,"Pepper,_bell___Bacterial_spot",0.5924,Strawberry___Leaf_scorch,0.3707,Cherry_(including_sour)___Powdery_mildew,0.0215
+apple_scab_field_01.jpg,medium,Apple___Apple_scab,NO,Tomato___Early_blight,0.5690,Corn_(maize)___Northern_Leaf_Blight,0.2672,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,0.0793
+corn_common_rust_field_01.jpg,medium,Corn_(maize)___Common_rust_,NO,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,0.9659,"Pepper,_bell___Bacterial_spot",0.0337,Apple___Black_rot,0.0002
+grape_powdery_mildew_field_01.jpg,medium,OOD/UNKNOWN,OOD,Cherry_(including_sour)___Powdery_mildew,0.4109,"Pepper,_bell___Bacterial_spot",0.2443,Strawberry___Leaf_scorch,0.1720
+medium_01_tomato_misclassified_as_squash.png,medium,OOD/UNKNOWN,OOD,Tomato___Early_blight,0.3512,Potato___Early_blight,0.3143,Cherry_(including_sour)___Powdery_mildew,0.1291
+pepper_bacterial_spot_field_01.jpg,medium,"Pepper,_bell___Bacterial_spot",YES,"Pepper,_bell___Bacterial_spot",0.9714,Grape___Esca_(Black_Measles),0.0263,Strawberry___Leaf_scorch,0.0023
+potato_late_blight_field_01.jpg,medium,Potato___Late_blight,NO,Corn_(maize)___healthy,0.7693,Tomato___healthy,0.1699,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,0.0524
+potato_late_blight_field_02.jpg,medium,Potato___Late_blight,NO,Tomato___Early_blight,0.9870,Potato___Early_blight,0.0052,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,0.0036
+tomato_early_blight_field_01.jpg,medium,Tomato___Early_blight,NO,Strawberry___Leaf_scorch,0.9195,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,0.0803,Tomato___Early_blight,0.0001
+tomato_late_blight_field_01.jpg,medium,Tomato___Late_blight,NO,Tomato___Leaf_Mold,0.7408,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,0.1191,Tomato___healthy,0.1033
+rose_black_spot_01.jpg,ood,OOD/UNKNOWN,OOD,Tomato___Leaf_Mold,1.0000,"Pepper,_bell___Bacterial_spot",0.0000,Strawberry___healthy,0.0000
+rose_black_spot_02.jpg,ood,OOD/UNKNOWN,OOD,Tomato___Tomato_mosaic_virus,0.4863,Strawberry___Leaf_scorch,0.3857,Apple___Cedar_apple_rust,0.0621
+sunflower_downy_mildew_ood_01.jpg,ood,OOD/UNKNOWN,OOD,Tomato___Early_blight,0.9991,Potato___Early_blight,0.0008,Cherry_(including_sour)___Powdery_mildew,0.0000
+sunflower_leaf_ood_01.jpg,ood,OOD/UNKNOWN,OOD,Potato___Early_blight,0.7296,Strawberry___Leaf_scorch,0.1671,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,0.0419
+wheat_leaf_rust_01.jpg,ood,OOD/UNKNOWN,OOD,Tomato___healthy,0.9786,Corn_(maize)___healthy,0.0179,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,0.0022
+wheat_leaf_rust_02.jpg,ood,OOD/UNKNOWN,OOD,Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,0.5586,Peach___healthy,0.4024,Grape___Esca_(Black_Measles),0.0199
