@@ -1,0 +1,10 @@
+{
+  "label": "plantdoc_enhanced",
+  "plantdoc_path": "test_images/enhanced/plantdoc",
+  "n_images": 231,
+  "overall_accuracy": 0.099567,
+  "topk_accuracy": 0.242424,
+  "macro_precision": 0.11996,
+  "macro_recall": 0.100184,
+  "macro_f1": 0.090407
+}
