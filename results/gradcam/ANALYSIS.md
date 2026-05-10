@@ -100,7 +100,7 @@ three qualitatively distinct failure modes.
 **True:** `Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot`
 **Predicted:** `Corn_(maize)___Northern_Leaf_Blight`
 **Confidence:** 0.8597 (86.0%)
-**Scale:** 103 errors out of 410 validation images (25.1% error rate)
+**Scale:** 107 errors out of 410 validation images (26.1% error rate)
 
 The Grad-CAM map reveals activation spread broadly across the grayish-green
 striped lesion areas that run parallel to the leaf veins. This spatial pattern
@@ -296,7 +296,7 @@ substantially on challenging inter-class boundaries.
   Grad-CAM evidence to move beyond aggregate metrics.
 - **Section 4.3 (Error Analysis):** Use Fig. B1–B2 to argue that residual errors
   are primarily task-intrinsic rather than model-intrinsic; connect to the
-  confusion matrix finding (103 Cercospora errors, 22 Late Blight cross-host errors).
+  confusion matrix finding (107 Cercospora errors, 22 Late Blight cross-host errors).
 - **Section 5 (Discussion):** Use Fig. C1–C4 as the central evidence for the
   claim that MobileNetV2 is the preferred architecture — not just for accuracy,
   but for the quality of its learned representations.
