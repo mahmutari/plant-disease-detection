@@ -1,350 +1,418 @@
+#!/usr/bin/env python
 """
-Plant Disease Detection — Web Interface
-========================================
-
-Streamlit-based web application for plant disease classification
-using a fine-tuned MobileNetV2 model with Grad-CAM interpretability.
-
-Authors: Mahmut Ari, Samet Kavlan
-Project: Senior Design Project II - Sakarya University
+Plant Disease Detection — Streamlit Web Interface
+Phase 3.5: 3-Model Comparison Selector
 """
 
 import os
-import sys
-from typing import List, Tuple
-
-import cv2
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import streamlit as st
-import torch
 from PIL import Image
+from torchvision import transforms, models
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
-# Ensure project root is importable from any working directory
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# ═══════════════════════════════════════════════════════════
+# CONFIGURATION
+# ═══════════════════════════════════════════════════════════
 
-from models.mobilenet_model import get_mobilenet_v2
-from preprocess.transform import val_transforms
+MODELS_CONFIG = {
+    "Original (Phase 2)": {
+        "path": "checkpoints/best_mobilenet.pth",
+        "description": "Trained on PlantVillage only (97.13% PV val accuracy)",
+        "strengths": "Best for controlled laboratory imagery",
+        "weaknesses": "Poor field generalization (6.67% web val)",
+        "stats": {"PV": 97.13, "PD": 16.02, "Web": 6.67, "OOD_risk": 50.0},
+    },
+    "Fine-tuned (Phase 3)": {
+        "path": "checkpoints/best_mobilenet_finetuned.pth",
+        "description": "Fine-tuned on PlantDoc training set (frozen backbone)",
+        "strengths": "Best for curated web imagery (26.67% web val)",
+        "weaknesses": "Catastrophic forgetting on PV (58.96%)",
+        "stats": {"PV": 58.96, "PD": 30.74, "Web": 26.67, "OOD_risk": 10.0},
+    },
+    "Hybrid V2 (Phase 3.5)": {
+        "path": "checkpoints/best_mobilenet_hybrid_v2.pth",
+        "description": "Trained on PlantVillage + PlantDoc with proper label mapping",
+        "strengths": "Best PD accuracy (41.13%), safest OOD behavior (0% false confidence)",
+        "weaknesses": "Web accuracy still limited (6.67%)",
+        "stats": {"PV": 96.07, "PD": 41.13, "Web": 6.67, "OOD_risk": 0.0},
+    },
+}
 
+CLASS_NAMES_DIR = "data/val"
+NUM_CLASSES = 38
+IMG_SIZE = 224
 
-# =====================================================================
-# Page Configuration
-# =====================================================================
+# ═══════════════════════════════════════════════════════════
+# STREAMLIT PAGE CONFIG
+# ═══════════════════════════════════════════════════════════
 
 st.set_page_config(
-    page_title="Plant Disease Detector",
+    page_title="Plant Disease Detection",
     page_icon="🌿",
     layout="wide",
-    initial_sidebar_state="expanded",
 )
 
+st.title("🌿 Plant Disease Detection System")
+st.markdown(
+    "**Senior Project — Phase 3.5**  \n"
+    "MobileNetV2-based Plant Disease Classification with Multi-Model Comparison  \n"
+    "*Sakarya University, Software Engineering*"
+)
 
-# =====================================================================
-# Cached Resources
-# =====================================================================
+# ═══════════════════════════════════════════════════════════
+# HELPER FUNCTIONS
+# ═══════════════════════════════════════════════════════════
 
-@st.cache_resource(show_spinner="Loading MobileNetV2 model...")
-def load_model(checkpoint_path: str) -> torch.nn.Module:
-    """
-    Load trained MobileNetV2 with checkpoint weights.
-    Cached by Streamlit so the model is loaded only once per session.
-    """
-    model = get_mobilenet_v2(num_classes=38)
-    state = torch.load(checkpoint_path, map_location="cpu")
-    model.load_state_dict(state)
+@st.cache_resource
+def load_model(checkpoint_path):
+    model = models.mobilenet_v2(weights=None)
+    model.classifier[1] = nn.Linear(model.last_channel, NUM_CLASSES)
+
+    checkpoint = torch.load(checkpoint_path, map_location='cpu')
+    if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+        model.load_state_dict(checkpoint['model_state_dict'])
+    elif isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
+        model.load_state_dict(checkpoint['state_dict'])
+    else:
+        model.load_state_dict(checkpoint)
+
     model.eval()
     return model
 
+@st.cache_data
+def get_class_names():
+    if not os.path.exists(CLASS_NAMES_DIR):
+        return [f"Class_{i}" for i in range(NUM_CLASSES)]
+    classes = sorted(os.listdir(CLASS_NAMES_DIR))
+    return [c for c in classes if os.path.isdir(os.path.join(CLASS_NAMES_DIR, c))]
 
-@st.cache_data(show_spinner=False)
-def load_class_names() -> List[str]:
-    """
-    Return the 38 class names in alphabetical order, matching ImageFolder indexing.
-    Cached so the filesystem is only read once per session.
-    """
-    return sorted(os.listdir("data/val"))
+def preprocess_image(image):
+    transform = transforms.Compose([
+        transforms.Resize((IMG_SIZE, IMG_SIZE)),
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225]
+        ),
+    ])
+    return transform(image).unsqueeze(0)
 
-
-# =====================================================================
-# Inference Helpers
-# =====================================================================
-
-def preprocess_image(pil_image: Image.Image) -> torch.Tensor:
-    """
-    Apply val_transforms to a PIL image and add batch dimension.
-
-    Returns:
-        (1, 3, 224, 224) float tensor, normalised with ImageNet stats
-    """
-    return val_transforms(pil_image.convert("RGB")).unsqueeze(0)
-
-
-def predict(
-    model: torch.nn.Module,
-    image_tensor: torch.Tensor,
-    class_names: List[str],
-    top_k: int = 3,
-) -> List[Tuple[str, float]]:
-    """
-    Run inference and return the top-k (class_name, probability) pairs.
-
-    Args:
-        model        : trained model in eval() mode
-        image_tensor : (1, 3, 224, 224) preprocessed tensor
-        class_names  : list of 38 class names (alphabetical)
-        top_k        : number of top predictions to return
-
-    Returns:
-        List of (class_name, probability) sorted by probability descending
-    """
+def predict(model, image_tensor, class_names):
     with torch.no_grad():
-        logits = model(image_tensor)
-        probs  = torch.softmax(logits, dim=1).squeeze(0)
+        outputs = model(image_tensor)
+        probabilities = F.softmax(outputs, dim=1)[0]
+        top3_probs, top3_indices = torch.topk(probabilities, 3)
 
-    top_probs, top_indices = torch.topk(probs, k=top_k)
-    return [
-        (class_names[idx.item()], prob.item())
-        for prob, idx in zip(top_probs, top_indices)
-    ]
+    predictions = []
+    for prob, idx in zip(top3_probs, top3_indices):
+        predictions.append({
+            'class': class_names[idx.item()],
+            'confidence': prob.item(),
+        })
+    return predictions
 
+def generate_gradcam(model, image_tensor, target_class_idx):
+    gradients = []
+    activations = []
 
-def format_class_name(raw: str) -> str:
-    """'Tomato___Early_blight' -> 'Tomato — Early Blight'  (display-friendly)"""
-    parts = raw.replace("_", " ").split("   ")   # triple space after replacing ___
-    if len(parts) == 2:
-        return f"{parts[0].strip().title()} — {parts[1].strip().title()}"
-    return raw.replace("_", " ").title()
+    def save_gradient(grad):
+        gradients.append(grad)
 
+    def forward_hook(module, input, output):
+        activations.append(output)
+        output.register_hook(save_gradient)
 
-# =====================================================================
-# Grad-CAM Helpers
-# =====================================================================
-
-def compute_gradcam(
-    model: torch.nn.Module,
-    image_tensor: torch.Tensor,
-    predicted_idx: int,
-) -> np.ndarray:
-    """
-    Return a (224, 224) float32 Grad-CAM activation map for the predicted class.
-
-    Uses a separate forward+backward pass — model.eval() stays active but
-    gradients must be enabled (no torch.no_grad() here).
-    """
-    from analysis.gradcam import GradCAM
     target_layer = model.features[-1]
-    cam = GradCAM(model, target_layer)
-    heatmap, _, _ = cam(image_tensor, target_class=predicted_idx)
-    cam.remove_hooks()
-    return heatmap
+    handle = target_layer.register_forward_hook(forward_hook)
 
+    try:
+        outputs = model(image_tensor)
+        model.zero_grad()
+        outputs[0, target_class_idx].backward()
 
-def create_overlay_visualization(
-    pil_image: Image.Image,
-    heatmap: np.ndarray,
-    alpha: float = 0.4,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Colorize a Grad-CAM heatmap and blend it onto the source image.
+        grads = gradients[0]
+        acts = activations[0]
 
-    Returns:
-        original_224   : (224, 224, 3) uint8 RGB
-        colored_heatmap: (224, 224, 3) uint8 RGB  — JET colormap
-        overlay        : (224, 224, 3) uint8 RGB  — alpha-blended composite
-    """
-    original      = np.array(pil_image.resize((224, 224)))
-    heatmap_uint8 = (heatmap * 255).astype(np.uint8)
-    colored_bgr   = cv2.applyColorMap(heatmap_uint8, cv2.COLORMAP_JET)
-    colored_rgb   = cv2.cvtColor(colored_bgr, cv2.COLOR_BGR2RGB)
-    overlay       = (alpha * colored_rgb + (1 - alpha) * original).astype(np.uint8)
-    return original, colored_rgb, overlay
+        weights = grads.mean(dim=[2, 3], keepdim=True)
+        cam = (weights * acts).sum(dim=1).squeeze()
+        cam = F.relu(cam)
 
+        if cam.max() > 0:
+            cam = cam / cam.max()
 
-# =====================================================================
-# Sidebar
-# =====================================================================
+        cam = cam.detach().numpy()
+    finally:
+        handle.remove()
 
-CHECKPOINTS = {
-    "Original (PlantVillage, 97.13% val)":    "checkpoints/best_mobilenet.pth",
-    "Fine-tuned (PlantDoc, 30.74% PlantDoc)": "checkpoints/best_mobilenet_finetuned.pth",
-}
+    return cam
 
-with st.sidebar:
-    st.title("🌿 Plant Disease Detector")
-    st.markdown("---")
-    st.markdown("### Model")
-    selected_label = st.selectbox(
-        "Checkpoint",
-        options=list(CHECKPOINTS.keys()),
-        index=0,
-    )
-    selected_ckpt = CHECKPOINTS[selected_label]
-    st.markdown("---")
-    st.markdown("### About")
-    st.markdown(
-        "Deep learning-based plant disease classification system "
-        "using MobileNetV2 trained on the New Plant Diseases Dataset "
-        "(38 classes, ~87K images)."
-    )
-    st.markdown("---")
-    st.markdown("### Model Info")
-    if "Fine-tuned" in selected_label:
-        st.markdown(
-            "**Architecture:** MobileNetV2  \n"
-            "**PlantVillage val:** 58.96%  \n"
-            "**PlantDoc test:** 30.74%  \n"
-            "**Web (in-dist):** 26.67%  \n"
-            "**Classes:** 38  \n"
-            "**Input size:** 224 × 224 px"
-        )
+def overlay_heatmap(image_pil, heatmap, alpha=0.4):
+    image_pil = image_pil.resize((IMG_SIZE, IMG_SIZE))
+    image_array = np.array(image_pil)
+
+    from scipy.ndimage import zoom
+    h, w = image_array.shape[:2]
+    zoom_factor = (h / heatmap.shape[0], w / heatmap.shape[1])
+    heatmap_resized = zoom(heatmap, zoom_factor, order=1)
+
+    colored_heatmap = cm.jet(heatmap_resized)[:, :, :3]
+    colored_heatmap = (colored_heatmap * 255).astype(np.uint8)
+
+    overlay = (alpha * colored_heatmap + (1 - alpha) * image_array).astype(np.uint8)
+
+    return overlay, heatmap_resized
+
+def get_confidence_badge(confidence):
+    if confidence >= 0.95:
+        return ("🟢", "HIGH", "green")
+    elif confidence >= 0.70:
+        return ("🟡", "MODERATE", "orange")
     else:
-        st.markdown(
-            "**Architecture:** MobileNetV2  \n"
-            "**PlantVillage val:** 97.13%  \n"
-            "**PlantDoc test:** 16.02%  \n"
-            "**Web (in-dist):** 6.67%  \n"
-            "**Classes:** 38  \n"
-            "**Input size:** 224 × 224 px"
-        )
-    st.markdown("---")
-    st.markdown("### Project Info")
-    st.markdown(
-        "**Institution:** Sakarya University  \n"
-        "**Department:** Software Engineering  \n"
-        "**Authors:** Mahmut Arı, Samet Kavlan  \n"
-        "**Year:** 2025-2026"
-    )
+        return ("🔴", "LOW", "red")
 
+# ═══════════════════════════════════════════════════════════
+# SIDEBAR — MODEL SELECTOR
+# ═══════════════════════════════════════════════════════════
 
-# =====================================================================
-# Load model and class names (once per session)
-# =====================================================================
+st.sidebar.title("⚙️ Configuration")
 
-try:
-    model       = load_model(selected_ckpt)
-    class_names = load_class_names()
-except Exception as e:
-    st.error(
-        f"**Model loading failed.**  \n"
-        f"Make sure `{selected_ckpt}` and `data/val/` exist.  \n"
-        f"Error: `{e}`"
-    )
-    st.stop()
-
-
-# =====================================================================
-# Main Page
-# =====================================================================
-
-st.title("Plant Disease Detection")
-st.markdown(
-    "Upload a leaf image to receive an automated disease diagnosis "
-    "with visual explanation via Grad-CAM."
+st.sidebar.markdown("### Model Selection")
+selected_model_name = st.sidebar.radio(
+    "Choose a model:",
+    list(MODELS_CONFIG.keys()),
+    index=2,
 )
 
-# ── File uploader ──────────────────────────────────────────────────
+model_info = MODELS_CONFIG[selected_model_name]
+
+st.sidebar.markdown("---")
+st.sidebar.markdown(f"**{selected_model_name}**")
+st.sidebar.markdown(f"*{model_info['description']}*")
+st.sidebar.markdown(f"✅ **Strengths:** {model_info['strengths']}")
+st.sidebar.markdown(f"⚠️ **Weaknesses:** {model_info['weaknesses']}")
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### Performance Metrics")
+stats = model_info['stats']
+st.sidebar.metric("PlantVillage Val", f"{stats['PV']}%")
+st.sidebar.metric("PlantDoc Test", f"{stats['PD']}%")
+st.sidebar.metric("Web Validation", f"{stats['Web']}%")
+st.sidebar.metric("OOD False Confidence", f"{stats['OOD_risk']}%", delta_color="inverse")
+
+st.sidebar.markdown("---")
+
+comparison_mode = st.sidebar.checkbox(
+    "🔬 Compare All Models",
+    value=False,
+    help="Run prediction on all 3 models simultaneously"
+)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown(
+    "### 📊 Multi-Distribution Performance  \n"
+    "No single model dominates across all distributions.  \n"
+    "**Hybrid V2** offers the best balance.  \n"
+    "**Fine-tuned** excels on curated web imagery.  \n"
+    "**Original** retains highest PV accuracy."
+)
+
+# ═══════════════════════════════════════════════════════════
+# MAIN AREA — IMAGE UPLOAD
+# ═══════════════════════════════════════════════════════════
+
 uploaded_file = st.file_uploader(
-    "Upload a leaf image",
+    "📤 Upload a plant leaf image",
     type=["jpg", "jpeg", "png"],
-    help="Supported formats: JPG, JPEG, PNG",
+    help="Upload a leaf image for disease classification"
 )
 
 if uploaded_file is not None:
+    image = Image.open(uploaded_file).convert('RGB')
+    class_names = get_class_names()
+    image_tensor = preprocess_image(image)
 
-    # ── Load image ─────────────────────────────────────────────────
-    try:
-        pil_image = Image.open(uploaded_file).convert("RGB")
-    except Exception:
-        st.error("❌ Could not read the uploaded file. Please upload a valid image.")
-        st.stop()
+    # ═════════════════════════════════════════════════════
+    # COMPARISON MODE — RUN ALL 3 MODELS
+    # ═════════════════════════════════════════════════════
+    if comparison_mode:
+        st.markdown("## 🔬 Comparison Mode — All 3 Models")
 
-    # ── Run inference (no_grad for efficiency) ─────────────────────
-    try:
-        with st.spinner("Analyzing image..."):
-            tensor = preprocess_image(pil_image)
-            top3   = predict(model, tensor, class_names, top_k=3)
-    except Exception as e:
-        st.error(f"❌ Prediction failed: `{e}`")
-        st.stop()
+        col_img, _ = st.columns([1, 2])
+        with col_img:
+            st.image(image, caption="Uploaded Image", use_container_width=True)
 
-    top1_raw,     top1_conf  = top3[0]
-    top1_display             = format_class_name(top1_raw)
-    predicted_idx            = class_names.index(top1_raw)
+        st.markdown("### Predictions Across Models")
 
-    # ── Two-column layout: image | results ─────────────────────────
-    col1, col2 = st.columns([1, 1.2])
+        cols = st.columns(3)
+        for col, (model_name, info) in zip(cols, MODELS_CONFIG.items()):
+            with col:
+                st.markdown(f"#### {model_name}")
 
-    with col1:
-        st.image(pil_image, caption="Uploaded Image", use_container_width=True)
+                if not os.path.exists(info['path']):
+                    st.error(f"Model file not found: {info['path']}")
+                    continue
 
-    with col2:
-        st.markdown("### Prediction Results")
+                try:
+                    model = load_model(info['path'])
+                    predictions = predict(model, image_tensor, class_names)
 
-        # Top-1 metric card
-        st.metric(
-            label="Predicted Class",
-            value=top1_display,
-            delta=f"{top1_conf:.2%} confidence",
-        )
+                    top1 = predictions[0]
+                    emoji, level, color = get_confidence_badge(top1['confidence'])
 
-        st.markdown("#### Top-3 Predictions")
-        for raw_name, prob in top3:
-            display_name = format_class_name(raw_name)
-            st.progress(prob, text=f"{display_name}: {prob:.2%}")
+                    st.markdown(
+                        f"**Prediction:** `{top1['class']}`  \n"
+                        f"**Confidence:** {top1['confidence']*100:.1f}% {emoji}  \n"
+                        f"**Level:** :{color}[{level}]"
+                    )
 
-        # Confidence interpretation
-        if top1_conf > 0.95:
-            st.success("✅ High confidence prediction")
-        elif top1_conf > 0.70:
-            st.warning("⚠️ Moderate confidence — verify with an expert")
-        else:
-            st.error("❌ Low confidence — interpret with caution")
+                    st.markdown("**Top-3:**")
+                    for i, pred in enumerate(predictions, 1):
+                        st.markdown(
+                            f"{i}. `{pred['class']}` — "
+                            f"{pred['confidence']*100:.1f}%"
+                        )
 
-    # ── Grad-CAM section (full width, below both columns) ──────────
-    st.markdown("---")
-    st.subheader("🔬 Model Attention Visualization (Grad-CAM)")
-    st.caption(
-        "Class-discriminative localization showing which leaf regions "
-        "influenced the model's prediction."
-    )
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
 
-    try:
-        with st.spinner("Generating Grad-CAM heatmap..."):
-            heatmap  = compute_gradcam(model, tensor, predicted_idx)
-            original, colored_heatmap, overlay = create_overlay_visualization(
-                pil_image, heatmap
-            )
-
-        gc_col1, gc_col2, gc_col3 = st.columns(3)
-        with gc_col1:
-            st.image(original,        caption="Original (224×224)",  use_container_width=True)
-        with gc_col2:
-            st.image(colored_heatmap, caption="Grad-CAM Heatmap",    use_container_width=True)
-        with gc_col3:
-            st.image(overlay,         caption="Overlay (α=0.4)",     use_container_width=True)
-
+        st.markdown("---")
         st.info(
-            "💡 **How to read this:** Red regions indicate areas the model "
-            "considered most important for its prediction. Ideally, these "
-            "should align with visible disease symptoms (lesions, discoloration) "
-            "rather than background or healthy tissue."
+            "💡 **Interpretation Tip:** Compare predictions across models. "
+            "If all 3 agree → high confidence prediction. "
+            "If they disagree → image likely out-of-distribution or ambiguous."
         )
 
-    except Exception as e:
-        st.warning(f"⚠️ Grad-CAM unavailable for this prediction: `{e}`")
+    # ═════════════════════════════════════════════════════
+    # SINGLE MODEL MODE
+    # ═════════════════════════════════════════════════════
+    else:
+        if not os.path.exists(model_info['path']):
+            st.error(
+                f"Model checkpoint not found at: {model_info['path']}  \n"
+                f"Please ensure the model has been trained and saved."
+            )
+        else:
+            try:
+                model = load_model(model_info['path'])
+
+                col_image, col_predict = st.columns([1, 1])
+
+                with col_image:
+                    st.markdown("### 📷 Input Image")
+                    st.image(image, caption="Uploaded Image", use_container_width=True)
+
+                with col_predict:
+                    st.markdown("### 🎯 Prediction Result")
+
+                    predictions = predict(model, image_tensor, class_names)
+                    top1 = predictions[0]
+                    emoji, level, color = get_confidence_badge(top1['confidence'])
+
+                    st.markdown(f"### {emoji} {top1['class']}")
+                    st.metric(
+                        "Confidence",
+                        f"{top1['confidence']*100:.2f}%",
+                        delta=level
+                    )
+
+                    if top1['confidence'] >= 0.95:
+                        st.success("✅ High confidence — reliable prediction")
+                    elif top1['confidence'] >= 0.70:
+                        st.warning("⚠️ Moderate confidence — verify result")
+                    else:
+                        st.error(
+                            "🔴 Low confidence — image may be out-of-distribution "
+                            "or ambiguous. Consider expert review."
+                        )
+
+                st.markdown("---")
+                st.markdown("### 📊 Top-3 Predictions")
+
+                for i, pred in enumerate(predictions, 1):
+                    conf_pct = pred['confidence'] * 100
+                    st.markdown(f"**{i}. {pred['class']}**")
+                    st.progress(pred['confidence'])
+                    st.caption(f"Confidence: {conf_pct:.2f}%")
+
+                st.markdown("---")
+                st.markdown("### 🔥 Grad-CAM Visualization")
+                st.caption(
+                    "Visual explanation showing which image regions the model "
+                    "focuses on for its prediction."
+                )
+
+                with st.spinner("Generating Grad-CAM heatmap..."):
+                    top1_idx = class_names.index(top1['class'])
+                    cam = generate_gradcam(model, image_tensor, top1_idx)
+                    overlay, heatmap = overlay_heatmap(image, cam)
+
+                    col_orig, col_heat, col_over = st.columns(3)
+
+                    with col_orig:
+                        st.markdown("**Original**")
+                        st.image(image.resize((IMG_SIZE, IMG_SIZE)), use_container_width=True)
+
+                    with col_heat:
+                        st.markdown("**Heatmap**")
+                        fig, ax = plt.subplots(figsize=(4, 4))
+                        ax.imshow(heatmap, cmap='jet')
+                        ax.axis('off')
+                        st.pyplot(fig, use_container_width=True)
+                        plt.close(fig)
+
+                    with col_over:
+                        st.markdown("**Overlay (α=0.4)**")
+                        st.image(overlay, use_container_width=True)
+
+            except Exception as e:
+                st.error(f"Error during prediction: {str(e)}")
+                st.exception(e)
 
 else:
+    # ═════════════════════════════════════════════════════
+    # WELCOME SCREEN
+    # ═════════════════════════════════════════════════════
     st.info(
-        "👆 Upload a leaf image above to get started.  \n"
-        "The model supports 38 plant disease classes from the PlantVillage dataset."
+        "👆 **Upload a plant leaf image to get started.**  \n"
+        "Supported formats: JPG, JPEG, PNG"
     )
 
+    st.markdown("---")
+    st.markdown("### 📚 About This System")
+    st.markdown(
+        "This system uses MobileNetV2 deep learning models to classify "
+        "plant diseases across 38 categories from the PlantVillage dataset. "
+        "Three model variants are available, each with different strengths:"
+    )
 
-# =====================================================================
-# Footer
-# =====================================================================
+    cols = st.columns(3)
+    for col, (model_name, info) in zip(cols, MODELS_CONFIG.items()):
+        with col:
+            st.markdown(f"#### {model_name}")
+            st.markdown(f"*{info['description']}*")
+            stats = info['stats']
+            st.markdown(
+                f"- PV val: **{stats['PV']}%**  \n"
+                f"- PD test: **{stats['PD']}%**  \n"
+                f"- Web val: **{stats['Web']}%**  \n"
+                f"- OOD risk: **{stats['OOD_risk']}%**"
+            )
+
+    st.markdown("---")
+    st.markdown("### 🎓 Project Information")
+    st.markdown(
+        "- **Authors:** Mahmut Arı, Samet Kavlan  \n"
+        "- **Institution:** Sakarya University, Software Engineering  \n"
+        "- **Phase 3.5:** Hybrid Training with Multi-Distribution Evaluation  \n"
+    )
 
 st.markdown("---")
 st.caption(
-    "Plant Disease Detection — Senior Design Project II  \n"
-    "Powered by PyTorch + Streamlit"
+    "Plant Disease Detection — Sakarya University Senior Project  \n"
+    "MobileNetV2 | PyTorch | Streamlit | Phase 3.5"
 )

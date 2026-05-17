@@ -1,0 +1,12 @@
+{
+  "PlantVillage_val": {
+    "Phase2_Original": 97.13,
+    "Phase3_FineTuned": 58.96,
+    "Phase35_Hybrid": 96.09037104484408
+  },
+  "PlantDoc_test": {
+    "Phase2_Original": 16.02,
+    "Phase3_FineTuned": 30.74,
+    "Phase35_Hybrid": 31.16883116883117
+  }
+}

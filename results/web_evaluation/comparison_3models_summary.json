@@ -1,0 +1,39 @@
+{
+  "total_images": 25,
+  "in_distribution_count": 15,
+  "ood_count": 10,
+  "models": {
+    "Original": {
+      "accuracy_in_dist": 6.67,
+      "correct": 1,
+      "total_in_dist": 15,
+      "mean_confidence": 0.7328,
+      "ood_high_conf_count": 5,
+      "ood_high_conf_rate": 50.0
+    },
+    "Fine-tuned": {
+      "accuracy_in_dist": 26.67,
+      "correct": 4,
+      "total_in_dist": 15,
+      "mean_confidence": 0.5096,
+      "ood_high_conf_count": 1,
+      "ood_high_conf_rate": 10.0
+    },
+    "Hybrid_V1": {
+      "accuracy_in_dist": 0.0,
+      "correct": 0,
+      "total_in_dist": 15,
+      "mean_confidence": 0.5231,
+      "ood_high_conf_count": 1,
+      "ood_high_conf_rate": 10.0
+    },
+    "Hybrid_V2": {
+      "accuracy_in_dist": 6.67,
+      "correct": 1,
+      "total_in_dist": 15,
+      "mean_confidence": 0.5023,
+      "ood_high_conf_count": 0,
+      "ood_high_conf_rate": 0.0
+    }
+  }
+}
